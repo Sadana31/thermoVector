@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Predictive Hazard & Safe Routing</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        #map { height: 100vh; width: 100vw; }
+        .control-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            width: 320px;
+        }
+        .control-group { margin-bottom: 15px; }
+        label { font-weight: bold; display: block; margin-bottom: 5px; font-size: 14px; }
+        input[type=range], input[type=datetime-local] { width: 100%; box-sizing: border-box; }
+        .legend { font-size: 12px; line-height: 18px; margin-top: 15px; border-top: 1px solid #ddd; padding-top: 10px; }
+        .legend i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.7; }
+        .stats-box { background: #f4f4f4; padding: 10px; border-radius: 5px; font-size: 13px; margin-bottom: 15px; }
+        .stats-box p { margin: 4px 0; }
+        .critical-text { color: #d32f2f; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div class="control-panel">
+    <h3>Predictive Threat Model</h3>
+    
+    <div class="control-group">
+        <label for="targetTime">Forecast Date & Time:</label>
+        <input type="datetime-local" id="targetTime" value="2026-09-02T14:30">
+    </div>
+    
+    <div class="control-group">
+        <label for="fuelMass">Fuel Mass: <span id="massVal">14000</span> kg</label>
+        <input type="range" id="fuelMass" min="5000" max="30000" value="14000" step="500">
+    </div>
+
+    <div class="stats-box" id="predictionsPanel">
+        <em>Loading ML predictions...</em>
+    </div>
+
+    <div class="legend">
+        <div><i style="background: #ff3333;"></i> Lethal Zone (10+ psi)</div>
+        <div><i style="background: #ffaa00;"></i> Injury Zone (1+ psi)</div>
+        <div><i style="background: #0088ff;"></i> Safe Approach Route</div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // Industrial Facility Coordinates (Default Center)
+    const facilityLat = 13.0827;
+    const facilityLng = 80.2707;
+
+    const map = L.map('map').setView([facilityLat, facilityLng], 14);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    let dangerLayer, moderateLayer, routeLayer, stagingMarker, blastMarker;
+
+    async function updateMap() {
+        // 1. Get user inputs
+        const timeInput = document.getElementById('targetTime').value;
+        const targetTime = timeInput.replace('T', ' ') + ':00'; // Format for Python
+        const fuelMass = parseFloat(document.getElementById('fuelMass').value);
+        document.getElementById('massVal').innerText = fuelMass;
+
+        // 2. Call the Master ML API
+        try {
+            const response = await fetch('/api/predict-scenario', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    target_time: targetTime,
+                    lat: facilityLat,
+                    lng: facilityLng,
+                    fuel_mass_kg: fuelMass,
+                    tank_diameter_m: 15.0,
+                    wall_thickness_m: 0.015
+                })
+            });
+
+            const data = await response.json();
+
+            // 3. Update the UI Dashboard with ML Predictions
+            const env = data.environmental_forecast;
+            const threat = data.threat_assessment;
+            
+            document.getElementById('predictionsPanel').innerHTML = `
+                <p><b>Predicted Weather:</b> ${env.temperature_c}°C, ${env.humidity_pct}% Hum</p>
+                <p><b>Predicted Wind:</b> ${env.wind_speed_ms} m/s @ ${env.wind_direction_deg}°</p>
+                <p><b>Internal Stress:</b> ${(threat.hoop_stress_pa / 1000000).toFixed(2)} MPa</p>
+                <p class="critical-text">⚠️ Time to Failure: ~${threat.time_to_failure_min} mins</p>
+            `;
+
+            // 4. Clear existing layers
+            if (dangerLayer) map.removeLayer(dangerLayer);
+            if (moderateLayer) map.removeLayer(moderateLayer);
+            if (routeLayer) map.removeLayer(routeLayer);
+            if (stagingMarker) map.removeLayer(stagingMarker);
+            if (blastMarker) map.removeLayer(blastMarker);
+
+            // 5. Render Geospatial Polygons
+            moderateLayer = L.geoJSON(data.geojson.moderate_zone, {
+                style: { color: '#ffaa00', fillColor: '#ffaa00', fillOpacity: 0.4, weight: 2 }
+            }).addTo(map);
+
+            dangerLayer = L.geoJSON(data.geojson.danger_zone, {
+                style: { color: '#ff3333', fillColor: '#ff3333', fillOpacity: 0.6, weight: 2 }
+            }).addTo(map);
+
+            // 6. Render Tactical Routing
+            routeLayer = L.polyline(data.tactical_routing.safe_approach_route, {
+                color: '#0088ff',
+                weight: 5,
+                dashArray: '10, 10'
+            }).addTo(map);
+
+            // 7. Render Markers
+            blastMarker = L.marker([facilityLat, facilityLng]).addTo(map).bindPopup("<b>Target Tank</b>");
+            stagingMarker = L.marker(data.tactical_routing.staging_point).addTo(map).bindPopup("<b>Rescue Staging Point</b>").openPopup();
+            
+        } catch (error) {
+            console.error("API Error:", error);
+            document.getElementById('predictionsPanel').innerHTML = `<p style="color:red;">Error fetching predictions. Ensure API is running.</p>`;
+        }
+    }
+
+    // Attach Event Listeners
+    document.getElementById('targetTime').addEventListener('change', updateMap);
+    document.getElementById('fuelMass').addEventListener('input', updateMap);
+
+    // Initial Load
+    updateMap();
+</script>
+</body>
+</html>
