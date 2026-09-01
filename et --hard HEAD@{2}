@@ -1,0 +1,16 @@
+[33m8ba530b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/feature/frontend[m[33m)[m HEAD@{0}: reset: moving to HEAD^
+[33mfe11a17[m HEAD@{1}: reset: moving to HEAD^
+[33m2a20fce[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mfeature/frontend[m[33m)[m HEAD@{2}: checkout: moving from main to main
+[33m2a20fce[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mfeature/frontend[m[33m)[m HEAD@{3}: merge feature/frontend: Fast-forward
+[33m82e6f5c[m HEAD@{4}: checkout: moving from feature/frontend to main
+[33m2a20fce[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mfeature/frontend[m[33m)[m HEAD@{5}: checkout: moving from feature/frontend to feature/frontend
+[33m2a20fce[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mfeature/frontend[m[33m)[m HEAD@{6}: checkout: moving from feature/map to feature/frontend
+[33m6544504[m[33m ([m[1;32mfeature/map[m[33m)[m HEAD@{7}: merge origin/feature/physics: Merge made by the 'ort' strategy.
+[33m883d9a9[m HEAD@{8}: commit (merge): Resolve conflict in backend/app/main.py
+[33mfe97096[m[33m ([m[1;31morigin/feature/map[m[33m)[m HEAD@{9}: checkout: moving from feature/frontend to feature/map
+[33m2a20fce[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mfeature/frontend[m[33m)[m HEAD@{10}: pull origin main: Merge made by the 'ort' strategy.
+[33mfe11a17[m HEAD@{11}: commit: Save local Python backend and map static files
+[33m8ba530b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/feature/frontend[m[33m)[m HEAD@{12}: commit: feat: build frontend configuration screen
+[33mbc0a227[m HEAD@{13}: commit: feat: build frontend configuration screen
+[33m82e6f5c[m HEAD@{14}: checkout: moving from main to feature/frontend
+[33m82e6f5c[m HEAD@{15}: clone: from https://github.com/vaisnavisabarish/threat-zone-estimator.git
