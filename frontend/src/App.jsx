@@ -3,6 +3,8 @@ import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Home from './pages/Home';
 import ThreatEstimator from './pages/ThreatEstimator';
 import PostBlastMap from './pages/PostBlastMap';
+import Configure from './pages/Configure';
+import Results from './pages/Results';
 
 export default function App() {
   const navigate = useNavigate();
@@ -25,8 +27,9 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/pre-blast" element={<ThreatEstimator />} />
-        <Route path="/current-blast" element={<ThreatEstimator />} />
+        <Route path="/current-blast" element={<Configure />} />
         <Route path="/post-blast" element={<PostBlastMap />} />
+        <Route path="/results" element={<Results />} />
       </Routes>
 
     </div>
