@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import MapView from '../components/map/mapView';
+import MapView from '../components/map/MapView';
 
 export default function Results() {
   const location = useLocation();
