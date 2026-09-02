@@ -28,11 +28,13 @@ export default function ThreatEstimatorMap() {
   const [predictions, setPredictions] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [dismissedAlert, setDismissedAlert] = useState(false);
 
-  // Native Leaflet references
+  // References
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const layerGroupRef = useRef(null);
+  const prevTargetTimeRef = useRef(targetTime);
 
   // Initialize Map ONCE
   useEffect(() => {
@@ -61,7 +63,7 @@ export default function ThreatEstimatorMap() {
   }, []);
 
   // Fetch from FastAPI Master ML API & Update Map Overlays
-  const updateMapData = async () => {
+  const updateMapData = async (isTimeChanged) => {
     setLoading(true);
     setError(null);
     try {
@@ -87,6 +89,11 @@ export default function ThreatEstimatorMap() {
 
       const data = await response.json();
       setPredictions(data);
+
+      // Re-trigger alert modal ONLY if the date or time specifically changed
+      if (isTimeChanged) {
+        setDismissedAlert(false);
+      }
 
       // Render native map overlays
       if (layerGroupRef.current) {
@@ -120,14 +127,16 @@ export default function ThreatEstimatorMap() {
     }
   };
 
-  // Trigger fetch whenever any parameter changes
+  // Trigger fetch and inspect if timestamp was what altered
   useEffect(() => {
-    updateMapData();
+    const isTimeChanged = prevTargetTimeRef.current !== targetTime;
+    prevTargetTimeRef.current = targetTime;
+
+    updateMapData(isTimeChanged);
   }, [targetTime, windSpeed, windDirection, temperature]);
 
-  // Active for all times once predictions are loaded
   const timeToFailure = predictions?.threat_assessment?.time_to_failure_min ?? 'N/A';
-  const isEmergency = predictions !== null;
+  const isEmergency = predictions !== null && !dismissedAlert;
 
   return (
     <div className="absolute inset-0 w-screen h-screen overflow-hidden font-sans bg-slate-950">
@@ -135,28 +144,55 @@ export default function ThreatEstimatorMap() {
       {/* NATIVE LEAFLET MAP CONTAINER */}
       <div ref={mapRef} className="absolute inset-0 w-full h-full z-0" />
 
-      {/* EMERGENCY SHUTDOWN POPUP OVERLAY - ACTIVE FOR ALL TIMES */}
+      {/* EMERGENCY SHUTDOWN POPUP OVERLAY */}
       {isEmergency && (
-        <div className="absolute inset-0 z-[2000] bg-red-950/80 backdrop-blur-lg flex items-center justify-center p-4 animate-pulse">
-          <div className="bg-slate-900 border-4 border-red-600 rounded-3xl p-8 max-w-xl w-full text-center shadow-[0_0_50px_rgba(220,38,38,0.6)] space-y-6">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-red-600/20 text-red-500 rounded-full text-4xl mb-2 border border-red-500">
+        <div className="absolute inset-0 z-[2000] bg-red-950/80 backdrop-blur-lg flex items-center justify-center p-4">
+          <div className="relative bg-slate-900 border-4 border-red-600 rounded-3xl p-8 max-w-xl w-full text-center shadow-[0_0_50px_rgba(220,38,38,0.6)] space-y-6">
+            
+            {/* CLOSE BUTTON */}
+            <button 
+              type="button"
+              onClick={() => setDismissedAlert(true)}
+              className="absolute top-4 right-5 text-slate-400 hover:text-white text-2xl font-black transition-colors cursor-pointer w-9 h-9 flex items-center justify-center rounded-full hover:bg-slate-800 border border-transparent hover:border-slate-700"
+              title="Dismiss Alert"
+            >
+              ✕
+            </button>
+
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-red-600/20 text-red-500 rounded-full text-4xl mb-2 border border-red-500 animate-pulse">
               🚨
             </div>
+            
             <h1 className="text-3xl md:text-4xl font-black text-white tracking-wider uppercase">
               CRITICAL EMERGENCY ALERT
             </h1>
+            
             <p className="text-red-400 text-lg font-mono font-bold">
               IMMEDIATE FACTORY SHUTDOWN REQUIRED
             </p>
+            
             <div className="bg-red-950/50 border border-red-800/80 rounded-2xl p-4 text-slate-200 text-sm md:text-base">
               System diagnostics indicate mandatory plant shutdown for the selected forecast period. Predicted catastrophic failure threshold reached in approximately <span className="text-white font-black underline decoration-red-500 text-lg">~{timeToFailure} minutes</span>.
             </div>
-            <div className="pt-2">
+
+            <div className="pt-2 flex flex-col sm:flex-row gap-3">
               <button 
-                onClick={() => alert("Emergency evacuation protocol broadcasted to plant operations.")}
-                className="w-full py-4 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl uppercase tracking-widest text-sm transition-all shadow-lg cursor-pointer"
+                type="button"
+                onClick={() => {
+                  alert("Emergency evacuation protocol broadcasted to plant operations.");
+                  setDismissedAlert(true);
+                }}
+                className="flex-1 py-4 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl uppercase tracking-widest text-sm transition-all shadow-lg cursor-pointer"
               >
-                Execute Plant Shutdown & Evacuation Protocol
+                Execute Protocol
+              </button>
+              
+              <button 
+                type="button"
+                onClick={() => setDismissedAlert(true)}
+                className="py-4 px-6 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold rounded-xl uppercase tracking-wider text-sm transition-all border border-slate-700 cursor-pointer"
+              >
+                Dismiss
               </button>
             </div>
           </div>
